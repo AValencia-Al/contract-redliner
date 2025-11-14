@@ -9,11 +9,6 @@ interface ContractViewerProps {
 const ContractViewer: React.FC<ContractViewerProps> = ({ clauses }) => {
   return (
     <section className="bg-white rounded-2xl shadow-sm p-6">
-      <button className="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
-        <Upload className="w-4 h-4" />
-        Upload Contract
-      </button>
-
       <div className="space-y-6">
         {clauses.map((clause) => (
           <div key={clause.id}>

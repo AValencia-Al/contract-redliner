@@ -30,7 +30,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, closeSidebar }) => {
           fixed z-50 top-0 left-0 h-full w-64 bg-white border-r shadow-lg 
           transform transition-transform duration-300 
           ${open ? "translate-x-0" : "-translate-x-full"} 
-          lg:translate-x-0 lg:relative lg:z-auto
+          lg:translate-x-0 lg:fixed lg:top-0 lg:left-0 lg:z-50
         `}
       >
         {/* Header */}

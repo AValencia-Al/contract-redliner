@@ -9,16 +9,15 @@ import { FileText, Sparkles, RefreshCw } from "lucide-react";
 const DashboardPage: React.FC = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [selected, setSelected] = useState<Contract | null>(null);
-  const [analysis, setAnalysis] = useState("");
+  const [analysis, setAnalysis] = useState<string>(""); // string, not array
   const [loading, setLoading] = useState(false);
 
-  // ---------- Load contracts ----------
   const loadContracts = async () => {
     try {
       const data = await apiGet<Contract[]>("/contracts");
       setContracts(data);
 
-      // keep or set a selected contract
+      // Keep or set a selected contract
       if (!selected && data.length > 0) {
         setSelected(data[0]);
       } else if (selected) {
@@ -32,17 +31,16 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     loadContracts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------- When a contract is uploaded from the modal ----------
   const handleUploaded = (contract: Contract) => {
+    // newest first
     setContracts((prev) => [contract, ...prev]);
     setSelected(contract);
-    setAnalysis("");
+    setAnalysis(""); // clear previous analysis
   };
 
-  // ---------- Run AI analysis ----------
+ 
   const handleAnalyze = async () => {
     if (!selected) return;
 
@@ -62,7 +60,7 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  // ---------- Text shown in InsightsPanel ----------
+
   const insightsText =
     loading
       ? "Analyzing this contract with AI…"
@@ -175,8 +173,8 @@ const DashboardPage: React.FC = () => {
 
         {/* RIGHT: AI insights + recent list */}
         <div className="flex flex-col gap-4">
-          {/* AI insights panel (your existing component) */}
-          <InsightsPanel insights={insightsText} />
+          {/* AI insights panel */}
+          <InsightsPanel insights={insightsText} loading={loading} />
 
           {/* Recent contracts */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">

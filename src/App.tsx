@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import SignUpPage from "./pages/SignUpPage";
-import DashboardPage from "./pages/DashboardPage";
-import ContractsPage from "./pages/ContractsPage";
-import SettingsPage from "./pages/SettingPage";
+import LoginPage from "./Pages/LoginPage";
+import SignUpPage from "./Pages/SignUpPage";
+import DashboardPage from "./Pages/DashboardPage";
+import ContractsPage from "./Pages/ContractsPage";
+import SettingsPage from "./Pages/SettingPage";
 import Sidebar from "./components/layout/Sidebar";
 import { Menu } from "lucide-react";
 

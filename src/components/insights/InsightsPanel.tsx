@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import type { Insight } from "../../types/contract";
 
 interface InsightsPanelProps {
-  insights: Insight[];
+  insights: string[];
 }
 
 const severityClasses: Record<string, string> = {

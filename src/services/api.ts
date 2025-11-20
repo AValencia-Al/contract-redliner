@@ -1,62 +1,83 @@
-// src/services/api.ts
-const API_URL = "http://localhost:4000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
-function getToken() {
-  return localStorage.getItem("token");
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 async function handleResponse(res: Response) {
-  if (!res.ok) {
-    let message = "Request failed";
-    try {
-      const text = await res.text();
-      message = text || message;
-    } catch {}
-    throw new Error(message);
+  let data: any = null;
+
+  try {
+    data = await res.json();
+  } catch {
+    // no JSON body
   }
-  return res.json();
+
+  if (!res.ok) {
+    // if backend sent JSON error, throw that
+    if (data) throw data;
+    throw new Error(res.statusText);
+  }
+
+  return data;
 }
 
-export async function apiGet(path: string) {
+export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
+    method: "GET",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
+      "Accept": "application/json",
+      ...getAuthHeaders(),
     },
   });
   return handleResponse(res);
 }
 
-export async function apiPost(path: string, body: any) {
+export async function apiPost<T = any>(
+  path: string,
+  body: any
+): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
-    },
-    body: JSON.stringify(body),
+    headers: isFormData
+      ? {
+          // 🚫 do NOT set Content-Type for FormData
+          ...getAuthHeaders(),
+        }
+      : {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+    body: isFormData ? body : JSON.stringify(body),
   });
+
   return handleResponse(res);
 }
 
-export async function apiDelete(path: string) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${getToken()}`,
-    },
-  });
-  return handleResponse(res);
-}
-
-export async function apiPut(path: string, body: any) {
+export async function apiPut<T = any>(
+  path: string,
+  body: any
+): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getToken()}`,
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
+export async function apiDelete<T = any>(path: string): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "DELETE",
+    headers: {
+      ...getAuthHeaders(),
+    },
   });
   return handleResponse(res);
 }

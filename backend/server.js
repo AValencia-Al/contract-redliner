@@ -25,7 +25,7 @@ app.use("/uploads", express.static(uploadsDir));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 
 if (!process.env.MONGODB_URI) {
@@ -55,7 +55,7 @@ const contractSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: String,
-    content: String, 
+    content: String,
     status: { type: String, default: "draft" },
     aiSummary: String,
     aiInsights: String,
@@ -63,7 +63,7 @@ const contractSchema = new mongoose.Schema(
       fileName: String,
       mimeType: String,
       size: Number,
-      url: String, 
+      url: String,
     },
   },
   { timestamps: true }
@@ -82,21 +82,13 @@ function auth(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = payload.id;
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("⚠️ OPENAI_API_KEY is not set. /analyze route will fail.");
-}
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
-
-app.get("/", (_req, res) => {
-  res.send("Backend is running ");
 });
 
 app.post("/api/auth/register", async (req, res) => {
@@ -123,7 +115,6 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
     const user = await User.create({ name, email, passwordHash });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -135,7 +126,6 @@ app.post("/api/auth/register", async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error("Register error:", err);
     res.status(500).json({ message: err.message || "Register failed" });
   }
 });
@@ -161,7 +151,6 @@ app.post("/api/auth/login", async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
-    console.error("Login error:", err);
     res.status(500).json({ message: err.message || "Login failed" });
   }
 });
@@ -170,8 +159,7 @@ app.get("/api/settings", auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("name email aiModel");
     res.json(user);
-  } catch (err) {
-    console.error("Get settings error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to load settings" });
   }
 });
@@ -185,8 +173,7 @@ app.put("/api/settings", auth, async (req, res) => {
       { new: true }
     ).select("name email aiModel");
     res.json(user);
-  } catch (err) {
-    console.error("Update settings error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to save settings" });
   }
 });
@@ -197,8 +184,7 @@ app.get("/api/contracts", auth, async (req, res) => {
       createdAt: -1,
     });
     res.json(contracts);
-  } catch (err) {
-    console.error("Get contracts error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to load contracts" });
   }
 });
@@ -212,8 +198,7 @@ app.post("/api/contracts", auth, async (req, res) => {
       content,
     });
     res.status(201).json(contract);
-  } catch (err) {
-    console.error("Create contract error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to create contract" });
   }
 });
@@ -223,149 +208,19 @@ app.delete("/api/contracts/:id", auth, async (req, res) => {
     const { id } = req.params;
     await Contract.deleteOne({ _id: id, owner: req.userId });
     res.json({ ok: true });
-  } catch (err) {
-    console.error("Delete contract error:", err);
+  } catch {
     res.status(500).json({ message: "Failed to delete contract" });
   }
 });
 
-app.post(
-  "/api/contracts/upload",
-  auth,
-  upload.single("file"),
-  async (req, res) => {
-    try {
-      const file = req.file;
+const distPath = path.join(process.cwd(), "dist");
+app.use(express.static(distPath));
 
-      if (!file) {
-        return res.status(400).json({ message: "No file uploaded" });
-      }
-
-      console.log("UPLOAD FILE:", {
-        name: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-      });
-
-      let text = "";
-
-      const lowerName = file.originalname.toLowerCase();
-      const mime = file.mimetype;
-
-      const isPdf =
-        mime === "application/pdf" ||
-        mime === "application/x-pdf" ||
-        lowerName.endsWith(".pdf");
-
-      const isDocx =
-        mime ===
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-        lowerName.endsWith(".docx");
-
-      if (isPdf) {
-        try {
-
-          const uint8Array = new Uint8Array(file.buffer);
-          const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
-
-          let fullText = "";
-
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            const strings = content.items.map((item) => item.str).join(" ");
-            fullText += strings + "\n";
-          }
-
-          text = fullText;
-        } catch (parseErr) {
-          console.error("PDF parse error:", parseErr);
-          text = "";
-        }
-      } else if (isDocx) {
-        try {
-          const result = await mammoth.extractRawText({ buffer: file.buffer });
-          text = result.value || "";
-        } catch (parseErr) {
-          console.error("DOCX parse error:", parseErr);
-          text = "";
-        }
-      } else if (mime.startsWith("text/")) {
-        text = file.buffer.toString("utf8");
-      } else {
-        return res.status(400).json({
-          message: "Unsupported file type (only PDF, DOCX, TXT)",
-        });
-      }
-
-      const titleFromBody = req.body.title?.trim();
-      const titleFromName = file.originalname.replace(/\.[^/.]+$/, "");
-      const title = titleFromBody || titleFromName || "Untitled contract";
-
-      const safeName = file.originalname.replace(/\s+/g, "_");
-      const fileNameOnDisk = `${Date.now()}-${safeName}`;
-      const filePath = path.join(uploadsDir, fileNameOnDisk);
-      fs.writeFileSync(filePath, file.buffer);
-
-      const contract = await Contract.create({
-        owner: req.userId,
-        title,
-        content: text,
-        originalFile: {
-          fileName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
-          url: `/uploads/${fileNameOnDisk}`,
-        },
-      });
-
-      res.status(201).json(contract);
-    } catch (err) {
-      console.error("Upload contract error:", err);
-      res.status(500).json({ message: "Failed to upload contract" });
-    }
-  }
-);
-
-app.post("/api/contracts/:id/analyze", auth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const contract = await Contract.findOne({ _id: id, owner: req.userId });
-    if (!contract) return res.status(404).json({ message: "Not found" });
-
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ message: "OpenAI key not configured" });
-    }
-
-    const user = await User.findById(req.userId);
-    const model = user?.aiModel || "gpt-4.1-mini";
-
-    const completion = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an AI legal assistant. Summarise the contract and highlight key clauses and potential risks in bullet points.",
-        },
-        { role: "user", content: contract.content },
-      ],
-    });
-
-    const analysis = completion.choices[0].message.content;
-
-    contract.aiInsights = analysis;
-    await contract.save();
-
-    res.json({ analysis });
-  } catch (err) {
-    console.error("AI analysis error:", err);
-    res.status(500).json({ message: "AI analysis failed" });
-  }
+app.get(/^(?!\/api|\/uploads).*/, (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
 });
-
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Backend running at http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

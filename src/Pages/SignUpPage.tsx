@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Lock, Mail, User } from "lucide-react";
 
+// Base URL for the backend API
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+
 const SignUpPage: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,7 +29,7 @@ const SignUpPage: React.FC = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:4000/api/auth/register", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

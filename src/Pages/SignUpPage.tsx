@@ -1,9 +1,8 @@
 import React, { useState } from "react";
 import { Lock, Mail, User } from "lucide-react";
 
-// Base URL for the backend API
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+// Use env in dev, same-origin in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const SignUpPage: React.FC = () => {
   const [name, setName] = useState("");
@@ -11,8 +10,6 @@ const SignUpPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  // ✅ Same regex as backend:
-  // at least 8 chars, 1 lowercase, 1 uppercase, 1 digit, 1 special char
   const strongPasswordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
@@ -20,7 +17,6 @@ const SignUpPage: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    // Client-side validation for better UX
     if (!strongPasswordRegex.test(password)) {
       setError(
         "Password must be at least 8 characters and include at least one lowercase letter, one uppercase letter, one number, and one special character."

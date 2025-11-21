@@ -7,9 +7,22 @@ const SignUpPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  // ✅ Same regex as backend:
+  // at least 8 chars, 1 lowercase, 1 uppercase, 1 digit, 1 special char
+  const strongPasswordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Client-side validation for better UX
+    if (!strongPasswordRegex.test(password)) {
+      setError(
+        "Password must be at least 8 characters and include at least one lowercase letter, one uppercase letter, one number, and one special character."
+      );
+      return;
+    }
 
     try {
       const res = await fetch("http://localhost:4000/api/auth/register", {
@@ -19,8 +32,15 @@ const SignUpPage: React.FC = () => {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Sign up failed");
+        let message = "Sign up failed";
+        try {
+          const data = await res.json();
+          message = data.message || message;
+        } catch {
+          const text = await res.text();
+          message = text || message;
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
@@ -92,6 +112,7 @@ const SignUpPage: React.FC = () => {
                 <input
                   type="password"
                   required
+                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -99,7 +120,8 @@ const SignUpPage: React.FC = () => {
                 />
               </div>
               <p className="text-xs text-gray-400">
-                At least 8 characters is recommended.
+                Must be at least 8 characters and include 1 uppercase, 1
+                lowercase, 1 number, and 1 special character.
               </p>
             </div>
 
@@ -113,7 +135,10 @@ const SignUpPage: React.FC = () => {
 
           <p className="text-center text-xs text-gray-500">
             Already have an account?{" "}
-            <a href="/login" className="text-blue-600 font-medium hover:underline">
+            <a
+              href="/login"
+              className="text-blue-600 font-medium hover:underline"
+            >
               Sign in
             </a>
           </p>

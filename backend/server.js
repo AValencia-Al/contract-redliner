@@ -13,39 +13,34 @@ import mammoth from "mammoth";
 
 const app = express();
 
-// ============== MIDDLEWARE ==============
 app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-// ============== UPLOADS FOLDER ==============
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use("/uploads", express.static(uploadsDir));
 
-// ============== MULTER (FILE UPLOADS) ==============
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
 
-// ============== MONGODB ==============
 if (!process.env.MONGODB_URI) {
-  console.error("❌ MONGODB_URI is not set in .env");
+  console.error("MONGODB_URI is not set in .env");
   process.exit(1);
 }
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
+  .then(() => console.log("Connected to MongoDB"))
   .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
+    console.error("MongoDB connection error:", err.message);
     process.exit(1);
   });
 
-// ============== SCHEMAS & MODELS ==============
 const userSchema = new mongoose.Schema(
   {
     name: String,
@@ -60,7 +55,7 @@ const contractSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: String,
-    content: String, // extracted text (PDF/DOCX/TXT)
+    content: String, 
     status: { type: String, default: "draft" },
     aiSummary: String,
     aiInsights: String,
@@ -68,7 +63,7 @@ const contractSchema = new mongoose.Schema(
       fileName: String,
       mimeType: String,
       size: Number,
-      url: String, // e.g. /uploads/12345-myfile.pdf
+      url: String, 
     },
   },
   { timestamps: true }
@@ -77,7 +72,6 @@ const contractSchema = new mongoose.Schema(
 const User = mongoose.model("User", userSchema);
 const Contract = mongoose.model("Contract", contractSchema);
 
-// ============== AUTH MIDDLEWARE ==============
 function auth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
@@ -93,7 +87,6 @@ function auth(req, res, next) {
   }
 }
 
-// ============== OPENAI CLIENT ==============
 if (!process.env.OPENAI_API_KEY) {
   console.warn("⚠️ OPENAI_API_KEY is not set. /analyze route will fail.");
 }
@@ -102,18 +95,26 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ============== HEALTH CHECK ==============
 app.get("/", (_req, res) => {
-  res.send("Backend is running ✅");
+  res.send("Backend is running ");
 });
 
-// ============== AUTH ROUTES ==============
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
+    }
+
+    const strongPasswordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    if (!strongPasswordRegex.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters and include at least one lowercase letter, one uppercase letter, one number, and one special character.",
+      });
     }
 
     const existing = await User.findOne({ email });
@@ -165,7 +166,6 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// ============== SETTINGS ROUTES ==============
 app.get("/api/settings", auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("name email aiModel");
@@ -191,7 +191,6 @@ app.put("/api/settings", auth, async (req, res) => {
   }
 });
 
-// ============== CONTRACT CRUD ROUTES ==============
 app.get("/api/contracts", auth, async (req, res) => {
   try {
     const contracts = await Contract.find({ owner: req.userId }).sort({
@@ -230,7 +229,6 @@ app.delete("/api/contracts/:id", auth, async (req, res) => {
   }
 });
 
-// ============== FILE UPLOAD ROUTE (PDF / DOCX / TXT) ==============
 app.post(
   "/api/contracts/upload",
   auth,
@@ -266,7 +264,7 @@ app.post(
 
       if (isPdf) {
         try {
-          // ✅ IMPORTANT: convert Buffer -> Uint8Array for pdfjs
+
           const uint8Array = new Uint8Array(file.buffer);
           const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
 
@@ -329,7 +327,6 @@ app.post(
   }
 );
 
-// ============== AI ANALYSIS ROUTE ==============
 app.post("/api/contracts/:id/analyze", auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -367,8 +364,8 @@ app.post("/api/contracts/:id/analyze", auth, async (req, res) => {
   }
 });
 
-// ============== START SERVER ==============
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`✅ Backend running at http://localhost:${PORT}`);
+  console.log(`Backend running at http://localhost:${PORT}`);
 });

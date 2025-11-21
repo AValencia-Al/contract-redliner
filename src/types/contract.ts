@@ -1,15 +1,17 @@
-export type Severity = "low" | "medium" | "high";
-
-export interface Clause {
-  id: string;
-  title: string;
-  body: string;
+export interface OriginalFile {
+  fileName: string;
+  mimeType: string;
+  size: number;
+  url: string;
 }
 
-export interface Insight {
-  id: string;
+export interface Contract {
+  _id: string;
   title: string;
-  description: string;
-  severity: Severity;
-  primaryActionLabel?: string;
+  content: string;
+  status: string;
+  createdAt: string;
+  aiSummary?: string;
+  aiInsights?: string;
+  originalFile?: OriginalFile; 
 }

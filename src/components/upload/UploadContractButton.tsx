@@ -1,21 +1,31 @@
-import useModal from "../../hooks/useModal";
+// src/components/upload/UploadContractButton.tsx
+import React, { useState } from "react";
 import UploadContractModal from "./UploadContractModal";
-import { Upload } from "lucide-react";
+import type { Contract } from "../../types/contract";
 
-export default function UploadContractButton() {
-  const modal = useModal();
+interface Props {
+  onUploaded: (contract: Contract) => void;
+}
+
+const UploadContractButton: React.FC<Props> = ({ onUploaded }) => {
+  const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
-        onClick={modal.show}
-        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700"
       >
-        <Upload className="w-5 h-5" />
-        Upload Contract
+        Upload contract
       </button>
 
-      <UploadContractModal open={modal.open} onClose={modal.hide} />
+      <UploadContractModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onUploaded={onUploaded}
+      />
     </>
   );
-}
+};
+
+export default UploadContractButton;

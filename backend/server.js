@@ -522,7 +522,7 @@ app.post("/api/contracts/:id/apply-suggestion", auth, async (req, res) => {
   }
 });
 
-const distPath = path.join(process.cwd(), "dist");
+const distPath = path.join(process.cwd(), "..", "dist");
 app.use(express.static(distPath));
 
 app.get(/^(?!\/api|\/uploads).*/, (req, res) => {

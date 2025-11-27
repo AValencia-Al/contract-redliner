@@ -11,7 +11,11 @@ import fs from "fs";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..");
 
 const app = express();
 
@@ -19,7 +23,7 @@ app.use(cors());
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-const uploadsDir = path.join(process.cwd(), "uploads");
+const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -266,7 +270,6 @@ app.delete("/api/contracts/:id", auth, async (req, res) => {
   }
 });
 
-
 app.get("/api/contracts/:id/download-pdf", auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -308,7 +311,6 @@ app.get("/api/contracts/:id/download-pdf", auth, async (req, res) => {
     res.status(500).json({ message: "Failed to generate PDF" });
   }
 });
-
 
 app.post(
   "/api/contracts/upload",
@@ -381,7 +383,8 @@ ${contract.content}
     const model = genAI.getGenerativeModel({ model: modelName });
     const result = await model.generateContent(prompt);
     const response = result.response;
-    const analysis = (response.text && response.text()) || "No analysis generated.";
+    const analysis =
+      (response.text && response.text()) || "No analysis generated.";
 
     contract.aiInsights = analysis;
     await contract.save();
@@ -499,7 +502,7 @@ app.post("/api/contracts/:id/apply-suggestion", auth, async (req, res) => {
     }
 
     const original = suggestion.original || "";
-    const replacement = suggestion.suggestion || "";
+       const replacement = suggestion.suggestion || "";
 
     if (!original || !replacement) {
       return res.status(400).json({ message: "Invalid suggestion" });
@@ -522,7 +525,7 @@ app.post("/api/contracts/:id/apply-suggestion", auth, async (req, res) => {
   }
 });
 
-const distPath = path.join(process.cwd(), "..", "dist");
+const distPath = path.join(rootDir, "dist");
 app.use(express.static(distPath));
 
 app.get(/^(?!\/api|\/uploads).*/, (req, res) => {

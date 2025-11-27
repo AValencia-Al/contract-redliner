@@ -14,8 +14,12 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
     );
   }
 
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-  const backendOrigin = apiUrl.replace(/\/api\/?$/, "");
+  // Compute backend origin: prefer VITE_API_URL if set, otherwise use current origin
+  const apiUrl = import.meta.env.VITE_API_URL || "/api";
+  const backendOrigin =
+    apiUrl && apiUrl.startsWith("http")
+      ? apiUrl.replace(/\/api\/?$/, "")
+      : window.location.origin;
 
   const fileMeta = contract.originalFile;
   const fileUrl = fileMeta?.url ? `${backendOrigin}${fileMeta.url}` : undefined;
@@ -35,6 +39,7 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
 
   return (
     <div className="h-full flex flex-col gap-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">{contract.title}</h3>
@@ -68,7 +73,9 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
         </div>
       </div>
 
+      {/* Two-column layout: text + preview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[560px]">
+        {/* Text panel */}
         <div className="flex flex-col">
           <h4 className="text-sm font-semibold mb-1">Extracted text</h4>
           <div className="flex-1 border border-gray-200 rounded-lg bg-white text-xs text-gray-800 p-3 overflow-y-auto whitespace-pre-wrap">
@@ -80,6 +87,7 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
           </div>
         </div>
 
+        {/* File preview panel */}
         <div className="flex flex-col">
           <h4 className="text-sm font-semibold mb-1">
             File preview {fileMeta ? `(${fileMeta.mimeType})` : ""}
@@ -100,6 +108,10 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
                 <p className="mb-2">
                   Your browser may not fully preview DOCX files inline.
                 </p>
+                <p className="mb-3">
+                  Use the button above or below to open the Word document in a
+                  new tab.
+                </p>
                 <a
                   href={fileUrl}
                   target="_blank"
@@ -111,6 +123,9 @@ const ContractViewer: React.FC<Props> = ({ contract }) => {
               </div>
             ) : (
               <div className="text-xs text-gray-600 text-center px-4">
+                <p className="mb-2">
+                  No inline preview available for this file type.
+                </p>
                 <a
                   href={fileUrl}
                   target="_blank"

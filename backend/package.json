@@ -1,0 +1,28 @@
+{
+  "name": "contract-redliner-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.11.0",
+    "mongoose": "^8.20.1",
+    "multer": "^2.0.2",
+    "openai": "^4.60.0",
+    "pdfjs-dist": "^5.4.394",
+    "pdfkit": "^0.17.2"
+  }
+}

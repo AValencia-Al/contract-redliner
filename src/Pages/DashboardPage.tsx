@@ -5,6 +5,7 @@ import UploadContractButton from "../components/upload/UploadContractButton";
 import InsightsPanel from "../components/insights/InsightsPanel";
 import type { Contract, ContractSuggestion } from "../types/contract";
 import { FileText, Sparkles, RefreshCw } from "lucide-react";
+import { diffWords } from "diff";
 
 const DashboardPage: React.FC = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -111,6 +112,31 @@ const DashboardPage: React.FC = () => {
     setSuggestions((prev) => prev.filter((s) => s.id !== suggestionId));
   };
 
+  const renderDiff = (original: string, suggestion: string) => {
+    const diff = diffWords(original, suggestion);
+
+    return diff.map((part, index) => {
+      if (part.added) {
+        return (
+          <span key={index} className="bg-green-200">
+            {part.value}
+          </span>
+        );
+      }
+      if (part.removed) {
+        return (
+          <span
+            key={index}
+            className="line-through text-red-600 bg-red-100"
+          >
+            {part.value}
+          </span>
+        );
+      }
+      return <span key={index}>{part.value}</span>;
+    });
+  };
+
   const insightsText =
     loading && !analysis
       ? "Analyzing this contract with AI…"
@@ -125,6 +151,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto min-h-[calc(100vh-120px)] flex flex-col gap-6">
+      {/* HEADER + SUMMARY CARDS */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
@@ -174,8 +201,11 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
+      {/* MAIN GRID: VIEWER + INSIGHTS + SUGGESTIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6 flex-1">
+        {/* LEFT: contract viewer & controls */}
         <div className="flex flex-col gap-4">
+          {/* Control bar */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-3 flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-400">
@@ -213,6 +243,7 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Viewer */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex-1 min-h-[360px]">
             {selected ? (
               <ContractViewer contract={selected} />
@@ -224,9 +255,12 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
+        {/* RIGHT: AI insights + suggestions + recent list */}
         <div className="flex flex-col gap-4">
+          {/* AI insights panel */}
           <InsightsPanel insights={insightsText} loading={loading} />
 
+          {/* AI suggestions panel */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold mb-2">AI suggestions</h3>
             {suggestions.length === 0 ? (
@@ -243,18 +277,19 @@ const DashboardPage: React.FC = () => {
                     {s.sectionTitle && (
                       <p className="font-semibold mb-1">{s.sectionTitle}</p>
                     )}
-                    <p className="text-gray-500 mb-1">
-                      <span className="font-medium">Original:</span>{" "}
-                      {s.original}
+
+                    <p className="text-[11px] text-gray-500 mb-1">
+                      Red = removed, green = added.
                     </p>
-                    <p className="text-gray-900 mb-1">
-                      <span className="font-medium">Suggested:</span>{" "}
-                      {s.suggestion}
-                    </p>
+
+                    <div className="text-xs bg-gray-50 p-2 rounded border mb-2">
+                      {renderDiff(s.original, s.suggestion)}
+                    </div>
+
                     <p className="text-gray-400 mb-2">
-                      <span className="font-medium">Reason:</span>{" "}
-                      {s.reason}
+                      <span className="font-medium">Reason:</span> {s.reason}
                     </p>
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleApplySuggestion(s.id)}
@@ -275,6 +310,7 @@ const DashboardPage: React.FC = () => {
             )}
           </div>
 
+          {/* Recent contracts */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold mb-2">Recent contracts</h3>
             {contracts.length === 0 ? (

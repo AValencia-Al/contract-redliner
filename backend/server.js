@@ -10,6 +10,8 @@ import path from "path";
 import fs from "fs";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import mammoth from "mammoth";
+import PDFDocument from "pdfkit";
+
 
 const app = express();
 
@@ -263,6 +265,50 @@ app.delete("/api/contracts/:id", auth, async (req, res) => {
     res.status(500).json({ message: "Failed to delete contract" });
   }
 });
+
+
+app.get("/api/contracts/:id/download-pdf", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contract = await Contract.findOne({
+      _id: id,
+      owner: req.userId,
+    });
+
+    if (!contract) {
+      return res.status(404).json({ message: "Contract not found" });
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${(contract.title || "contract")
+        .replace(/\s+/g, "_")
+        .toLowerCase()}_revised.pdf"`
+    );
+
+    doc.pipe(res);
+
+    doc
+      .fontSize(18)
+      .text(contract.title || "Contract (Revised)", { align: "center" })
+      .moveDown();
+
+    doc.fontSize(11).text(contract.content, {
+      align: "left",
+      lineGap: 5,
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error("PDF generation failed:", err);
+    res.status(500).json({ message: "Failed to generate PDF" });
+  }
+});
+
 
 app.post(
   "/api/contracts/upload",

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Lock, Mail, User } from "lucide-react";
 
-// Use env in dev, same-origin in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const SignUpPage: React.FC = () => {
@@ -13,9 +12,17 @@ const SignUpPage: React.FC = () => {
   const strongPasswordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
+  const emailRegex =
+    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
 
     if (!strongPasswordRegex.test(password)) {
       setError(
@@ -73,7 +80,7 @@ const SignUpPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Full name
               </label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
                 <User className="w-4 h-4 text-gray-400" />
                 <input
                   type="text"
@@ -90,12 +97,13 @@ const SignUpPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Email
               </label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
                 <Mail className="w-4 h-4 text-gray-400" />
                 <input
                   type="email"
                   required
                   value={email}
+                  pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full bg-transparent outline-none text-sm"
@@ -107,7 +115,7 @@ const SignUpPage: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700">
                 Password
               </label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
                 <Lock className="w-4 h-4 text-gray-400" />
                 <input
                   type="password"
@@ -119,15 +127,11 @@ const SignUpPage: React.FC = () => {
                   className="w-full bg-transparent outline-none text-sm"
                 />
               </div>
-              <p className="text-xs text-gray-400">
-                Must be at least 8 characters and include 1 uppercase, 1
-                lowercase, 1 number, and 1 special character.
-              </p>
             </div>
 
             <button
               type="submit"
-              className="w-full mt-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+              className="w-full mt-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
             >
               Create account
             </button>
@@ -135,10 +139,7 @@ const SignUpPage: React.FC = () => {
 
           <p className="text-center text-xs text-gray-500">
             Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-blue-600 font-medium hover:underline"
-            >
+            <a href="/login" className="text-blue-600 font-medium">
               Sign in
             </a>
           </p>

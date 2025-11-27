@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Mail, Lock } from "lucide-react";
 
-// Use env in dev, same-origin in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const LoginPage: React.FC = () => {
@@ -9,9 +8,17 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const emailRegex =
+    /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -21,8 +28,15 @@ const LoginPage: React.FC = () => {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Login failed");
+        let message = "Login failed";
+        try {
+          const data = await res.json();
+          message = data.message || message;
+        } catch {
+          const text = await res.text();
+          message = text || message;
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
@@ -35,74 +49,48 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-sm p-8 space-y-6">
-          <div className="space-y-1 text-center">
-            <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="text-sm text-gray-500">
-              Sign in to access your contract dashboard.
-            </p>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm p-8 space-y-6">
+        <h1 className="text-2xl font-bold text-center">Sign in</h1>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+            {error}
+          </p>
+        )}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
+            <Mail className="w-4 h-4 text-gray-400" />
+            <input
+              type="email"
+              required
+              value={email}
+              pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full bg-transparent outline-none text-sm"
+            />
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
-              {error}
-            </p>
-          )}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50">
+            <Lock className="w-4 h-4 text-gray-400" />
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full bg-transparent outline-none text-sm"
+            />
+          </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full bg-transparent outline-none text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
-                <Lock className="w-4 h-4 text-gray-400" />
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-transparent outline-none text-sm"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full mt-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
-            >
-              Sign in
-            </button>
-          </form>
-
-          <p className="text-center text-xs text-gray-500">
-            Don&apos;t have an account?{" "}
-            <a
-              href="/signup"
-              className="text-blue-600 font-medium hover:underline"
-            >
-              Create one
-            </a>
-          </p>
-        </div>
+          <button
+            type="submit"
+            className="w-full px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+          >
+            Sign in
+          </button>
+        </form>
       </div>
     </div>
   );

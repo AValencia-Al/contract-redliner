@@ -152,12 +152,21 @@ app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
-    }
+    const emailRegex =
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
     const strongPasswordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+
+    if (!email || !emailRegex.test(email)) {
+      return res
+        .status(400)
+        .json({ message: "Please enter a valid email address." });
+    }
+
+    if (!password) {
+      return res.status(400).json({ message: "Password required" });
+    }
 
     if (!strongPasswordRegex.test(password)) {
       return res.status(400).json({
@@ -502,7 +511,7 @@ app.post("/api/contracts/:id/apply-suggestion", auth, async (req, res) => {
     }
 
     const original = suggestion.original || "";
-       const replacement = suggestion.suggestion || "";
+    const replacement = suggestion.suggestion || "";
 
     if (!original || !replacement) {
       return res.status(400).json({ message: "Invalid suggestion" });

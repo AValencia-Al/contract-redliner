@@ -5,6 +5,14 @@ export interface OriginalFile {
   url: string;
 }
 
+export type ContractSuggestion = {
+  id: string;
+  sectionTitle?: string;
+  original: string;
+  suggestion: string;
+  reason: string;
+};
+
 export interface Contract {
   _id: string;
   title: string;
@@ -13,5 +21,6 @@ export interface Contract {
   createdAt: string;
   aiSummary?: string;
   aiInsights?: string;
-  originalFile?: OriginalFile; 
+  originalFile?: OriginalFile;
+  aiSuggestions?: ContractSuggestion[];
 }

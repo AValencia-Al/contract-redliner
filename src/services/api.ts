@@ -22,7 +22,6 @@ async function handleResponse(res: Response) {
   try {
     data = await res.json();
   } catch {
-    // No JSON body
   }
 
   if (!res.ok) {
@@ -32,7 +31,6 @@ async function handleResponse(res: Response) {
 
   return data;
 }
-
 
 export async function apiGet<T = any>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -44,7 +42,8 @@ export async function apiGet<T = any>(path: string): Promise<T> {
 }
 
 export async function apiPost<T = any>(path: string, body: any): Promise<T> {
-  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
 
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",

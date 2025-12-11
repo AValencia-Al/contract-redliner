@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../services/api";
-import type { Contract, ContractSuggestion } from "../types/contract";
+import type { Contract } from "../types/contract";
 import { ArrowLeft, Check, X, Download, FileText, PartyPopper } from "lucide-react";
 import { diffWords } from "diff";
 

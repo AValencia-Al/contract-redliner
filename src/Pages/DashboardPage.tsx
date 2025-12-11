@@ -297,7 +297,6 @@ const DashboardPage: React.FC = () => {
                     }`}
                     onClick={() => {
                       setSelected(c);
-                      setAnalysis("");
                       setSuggestions(c.aiSuggestions || []);
                     }}
                   >

@@ -5,6 +5,9 @@ import SignUpPage from "./Pages/SignUpPage";
 import DashboardPage from "./Pages/DashboardPage";
 import ContractsPage from "./Pages/ContractsPage";
 import SettingsPage from "./Pages/SettingPage";
+import RedlinePage from "./Pages/RedlinePage";
+import TermsPage from "./Pages/TermsPage";
+import PrivacyPage from "./Pages/PrivacyPage";
 import Sidebar from "./components/layout/Sidebar";
 import { Menu } from "lucide-react";
 
@@ -63,6 +66,8 @@ const App: React.FC = () => {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
 
       {/* PROTECTED ROUTES */}
       <Route
@@ -94,6 +99,15 @@ const App: React.FC = () => {
             <MainLayout>
               <SettingsPage />
             </MainLayout>
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/redline/:id"
+        element={
+          <RequireAuth>
+            <RedlinePage />
           </RequireAuth>
         }
       />

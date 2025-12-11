@@ -1,37 +1,37 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiGet, apiPost } from "../services/api";
 import ContractViewer from "../components/contracts/ContractViewer";
 import UploadContractButton from "../components/upload/UploadContractButton";
-import InsightsPanel from "../components/insights/InsightsPanel";
 import type { Contract, ContractSuggestion } from "../types/contract";
-import { FileText, Sparkles, RefreshCw } from "lucide-react";
+import { FileText, Sparkles, RefreshCw, FileEdit } from "lucide-react";
 import { diffWords } from "diff";
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [selected, setSelected] = useState<Contract | null>(null);
-  const [analysis, setAnalysis] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<ContractSuggestion[]>([]);
 
   const loadContracts = async () => {
     try {
       const data = await apiGet<Contract[]>("/contracts");
-      setContracts(data);
+      const contractsData = Array.isArray(data) ? data : [];
+      setContracts(contractsData);
 
-      if (!selected && data.length > 0) {
-        const first = data[0];
+      if (!selected && contractsData.length > 0) {
+        const first = contractsData[0];
         setSelected(first);
-        setAnalysis("");
         setSuggestions(first.aiSuggestions || []);
       } else if (selected) {
-        const updated = data.find((c) => c._id === selected._id) || null;
+        const updated = contractsData.find((c) => c._id === selected._id) || null;
         setSelected(updated);
-        setAnalysis("");
         setSuggestions(updated?.aiSuggestions || []);
       }
     } catch (err) {
       console.error("Failed to load contracts", err);
+      setContracts([]);
     }
   };
 
@@ -43,27 +43,7 @@ const DashboardPage: React.FC = () => {
   const handleUploaded = (contract: Contract) => {
     setContracts((prev) => [contract, ...prev]);
     setSelected(contract);
-    setAnalysis("");
     setSuggestions(contract.aiSuggestions || []);
-  };
-
-  const handleAnalyze = async () => {
-    if (!selected) return;
-
-    setLoading(true);
-    setAnalysis("");
-
-    try {
-      const res = await apiPost<{ analysis: string }>(
-        `/contracts/${selected._id}/analyze`,
-        {}
-      );
-      setAnalysis(res.analysis);
-    } catch (err) {
-      console.error("Analyze failed", err);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleSuggestChanges = async () => {
@@ -100,7 +80,6 @@ const DashboardPage: React.FC = () => {
         prev.map((c) => (c._id === res.contract._id ? res.contract : c))
       );
       setSuggestions((prev) => prev.filter((s) => s.id !== suggestionId));
-      setAnalysis("");
     } catch (err) {
       console.error("Apply suggestion failed", err);
     } finally {
@@ -136,13 +115,6 @@ const DashboardPage: React.FC = () => {
       return <span key={index}>{part.value}</span>;
     });
   };
-
-  const insightsText =
-    loading && !analysis
-      ? "Analyzing this contract with AI…"
-      : analysis ||
-        selected?.aiInsights ||
-        "No AI insights yet. Select a contract and click “Analyze with AI”.";
 
   const totalContracts = contracts.length;
   const lastCreated =
@@ -225,20 +197,21 @@ const DashboardPage: React.FC = () => {
                 Refresh
               </button>
               <button
+                onClick={() => selected && navigate(`/redline/${selected._id}`)}
+                disabled={!selected || !suggestions.length}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-60"
+                title={!suggestions.length ? "No suggestions available" : "Review changes"}
+              >
+                <FileEdit className="w-3 h-3" />
+                Redline View
+              </button>
+              <button
                 onClick={handleSuggestChanges}
                 disabled={!selected || loading}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
               >
                 <Sparkles className="w-3 h-3" />
-                Suggest changes
-              </button>
-              <button
-                onClick={handleAnalyze}
-                disabled={!selected || loading}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
-              >
-                <Sparkles className="w-3 h-3" />
-                {loading ? "Analyzing…" : "Analyze with AI"}
+                {loading ? "Generating…" : "Suggest changes"}
               </button>
             </div>
           </div>
@@ -255,11 +228,8 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* RIGHT: AI insights + suggestions + recent list */}
+        {/* RIGHT: suggestions + recent list */}
         <div className="flex flex-col gap-4">
-          {/* AI insights panel */}
-          <InsightsPanel insights={insightsText} loading={loading} />
-
           {/* AI suggestions panel */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <h3 className="text-sm font-semibold mb-2">AI suggestions</h3>

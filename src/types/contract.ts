@@ -22,5 +22,6 @@ export interface Contract {
   aiSummary?: string;
   aiInsights?: string;
   originalFile?: OriginalFile;
+  previewPdfUrl?: string;
   aiSuggestions?: ContractSuggestion[];
 }

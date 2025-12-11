@@ -98,6 +98,16 @@ const LoginPage: React.FC = () => {
             Create one
           </a>
         </p>
+
+        <div className="text-center text-xs text-gray-400 mt-4 space-x-3">
+          <a href="/terms" className="hover:text-gray-600 underline">
+            Terms
+          </a>
+          <span>•</span>
+          <a href="/privacy" className="hover:text-gray-600 underline">
+            Privacy
+          </a>
+        </div>
       </div>
     </div>
   );

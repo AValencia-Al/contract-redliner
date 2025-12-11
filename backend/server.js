@@ -12,6 +12,8 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import mammoth from "mammoth";
 import PDFDocument from "pdfkit";
 import { fileURLToPath } from "url";
+import docxConverter from "docx-pdf";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel } from "docx";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,6 +71,7 @@ const contractSchema = new mongoose.Schema(
       size: Number,
       url: String,
     },
+    previewPdfUrl: String,
     aiSuggestions: [
       {
         id: String,
@@ -221,6 +224,39 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.post("/api/auth/change-password", auth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Current and new passwords are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters long" });
+    }
+
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = hashedPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ message: "Failed to change password" });
+  }
+});
+
 app.get("/api/settings", auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("name email aiModel");
@@ -292,7 +328,11 @@ app.get("/api/contracts/:id/download-pdf", auth, async (req, res) => {
       return res.status(404).json({ message: "Contract not found" });
     }
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({
+      margin: 72,
+      size: 'A4',
+      bufferPages: true
+    });
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -304,20 +344,162 @@ app.get("/api/contracts/:id/download-pdf", auth, async (req, res) => {
 
     doc.pipe(res);
 
+    // Title
     doc
-      .fontSize(18)
-      .text(contract.title || "Contract (Revised)", { align: "center" })
-      .moveDown();
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .text(contract.title || "Contract (Revised)", {
+        align: "center",
+        underline: true
+      })
+      .moveDown(1.5);
 
-    doc.fontSize(11).text(contract.content, {
-      align: "left",
-      lineGap: 5,
+    // Content - split by paragraphs and preserve structure
+    const paragraphs = contract.content.split(/\n\n+/);
+
+    doc.font('Helvetica').fontSize(11);
+
+    paragraphs.forEach((paragraph, index) => {
+      const trimmed = paragraph.trim();
+      if (!trimmed) return;
+
+      // Check if it's a heading (all caps or ends with colon)
+      const isHeading = trimmed === trimmed.toUpperCase() ||
+                       (trimmed.length < 100 && trimmed.endsWith(':'));
+
+      if (isHeading) {
+        doc
+          .font('Helvetica-Bold')
+          .fontSize(12)
+          .text(trimmed, {
+            align: 'left',
+            continued: false
+          })
+          .moveDown(0.5);
+        doc.font('Helvetica').fontSize(11);
+      } else {
+        // Regular paragraph with proper line spacing
+        const lines = trimmed.split('\n');
+        lines.forEach((line, lineIndex) => {
+          if (line.trim()) {
+            doc.text(line.trim(), {
+              align: 'justify',
+              indent: 0,
+              lineGap: 2
+            });
+          }
+        });
+
+        if (index < paragraphs.length - 1) {
+          doc.moveDown(0.8);
+        }
+      }
     });
 
     doc.end();
   } catch (err) {
     console.error("PDF generation failed:", err);
     res.status(500).json({ message: "Failed to generate PDF" });
+  }
+});
+
+app.get("/api/contracts/:id/download-docx", auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contract = await Contract.findOne({
+      _id: id,
+      owner: req.userId,
+    });
+
+    if (!contract) {
+      return res.status(404).json({ message: "Contract not found" });
+    }
+
+    // Parse content into paragraphs
+    const paragraphs = contract.content.split(/\n\n+/);
+    const docParagraphs = [];
+
+    // Add title
+    docParagraphs.push(
+      new Paragraph({
+        text: contract.title || "Contract (Revised)",
+        heading: HeadingLevel.HEADING_1,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 }
+      })
+    );
+
+    // Add content paragraphs
+    paragraphs.forEach((para) => {
+      const trimmed = para.trim();
+      if (!trimmed) return;
+
+      // Check if it's a heading (all caps or ends with colon)
+      const isHeading = trimmed === trimmed.toUpperCase() ||
+                       (trimmed.length < 100 && trimmed.endsWith(':'));
+
+      if (isHeading) {
+        docParagraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: trimmed,
+                bold: true,
+                size: 24
+              })
+            ],
+            spacing: { before: 240, after: 120 }
+          })
+        );
+      } else {
+        // Handle multi-line paragraphs
+        const lines = trimmed.split('\n');
+        lines.forEach((line, lineIndex) => {
+          if (line.trim()) {
+            docParagraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: line.trim(),
+                    size: 22
+                  })
+                ],
+                alignment: AlignmentType.JUSTIFIED,
+                spacing: {
+                  after: lineIndex === lines.length - 1 ? 200 : 80,
+                  line: 276
+                }
+              })
+            );
+          }
+        });
+      }
+    });
+
+    // Create document
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: docParagraphs
+      }]
+    });
+
+    // Generate buffer
+    const buffer = await Packer.toBuffer(doc);
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${(contract.title || "contract")
+        .replace(/\s+/g, "_")
+        .toLowerCase()}_revised.docx"`
+    );
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("DOCX generation failed:", err);
+    res.status(500).json({ message: "Failed to generate DOCX" });
   }
 });
 
@@ -341,6 +523,41 @@ app.post(
       const filePath = path.join(uploadsDir, safeName);
       fs.writeFileSync(filePath, file.buffer);
 
+      const ext = path.extname(file.originalname).toLowerCase();
+      const mime = file.mimetype;
+      let previewPdfUrl = null;
+
+      // Convert DOCX to PDF for preview
+      const isDocx =
+        ext === ".docx" ||
+        mime ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+      if (isDocx) {
+        try {
+          const pdfFileName = safeName.replace(/\.docx$/i, "") + "-preview.pdf";
+          const pdfPath = path.join(uploadsDir, pdfFileName);
+
+          await new Promise((resolve, reject) => {
+            docxConverter(filePath, pdfPath, (err, result) => {
+              if (err) {
+                console.error("DOCX to PDF conversion failed:", err);
+                reject(err);
+              } else {
+                resolve(result);
+              }
+            });
+          });
+
+          previewPdfUrl = `/uploads/${pdfFileName}`;
+        } catch (conversionError) {
+          console.error(
+            "Failed to generate preview PDF, continuing without it:",
+            conversionError
+          );
+        }
+      }
+
       const contract = await Contract.create({
         owner: req.userId,
         title: title?.trim() || file.originalname,
@@ -351,10 +568,12 @@ app.post(
           size: file.size,
           url: `/uploads/${safeName}`,
         },
+        previewPdfUrl,
       });
 
       res.status(201).json(contract);
-    } catch {
+    } catch (err) {
+      console.error("Upload failed:", err);
       res.status(500).json({ message: "Failed to upload contract" });
     }
   }

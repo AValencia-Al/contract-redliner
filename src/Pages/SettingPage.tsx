@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { apiGet, apiPut } from "../services/api";
-import { Sparkles, User, Shield } from "lucide-react";
+import { apiGet, apiPut, apiPost } from "../services/api";
+import { User, Shield } from "lucide-react";
 
 interface UserSettings {
   name: string;
   email: string;
-  aiModel: string;
 }
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [autoAnalyze, setAutoAnalyze] = useState<boolean>(true); // local-only example toggle
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -22,7 +25,6 @@ const SettingsPage: React.FC = () => {
         setSettings({
           name: data.name || "",
           email: data.email || "",
-          aiModel: data.aiModel || "gpt-4.1-mini",
         });
       } catch (err) {
         console.error(err);
@@ -42,14 +44,12 @@ const SettingsPage: React.FC = () => {
     try {
       const updated = await apiPut("/settings", {
         name: settings.name,
-        aiModel: settings.aiModel,
       });
       setSettings((prev) =>
         prev
           ? {
               ...prev,
               name: updated.name,
-              aiModel: updated.aiModel,
             }
           : prev
       );
@@ -62,6 +62,40 @@ const SettingsPage: React.FC = () => {
     }
   };
 
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordMessage(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage("New passwords do not match.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordMessage("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await apiPost("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+      setPasswordMessage("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      console.error(err);
+      setPasswordMessage(
+        err?.message || "Failed to change password. Please check your current password."
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   if (loading || !settings) {
     return <p className="text-sm text-gray-500">Loading settings…</p>;
   }
@@ -71,7 +105,7 @@ const SettingsPage: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold mb-1">Settings</h1>
         <p className="text-sm text-gray-500">
-          Manage your user preferences, AI controls, and account details.
+          Manage your profile and account security.
         </p>
       </div>
 
@@ -81,7 +115,7 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Profile & account details */}
+      {/* Profile & security */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* User profile */}
         <form
@@ -136,96 +170,80 @@ const SettingsPage: React.FC = () => {
           </button>
         </form>
 
-        {/* AI controls */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        {/* Change password */}
+        <form
+          onSubmit={handleChangePassword}
+          className="bg-white rounded-2xl shadow-sm p-6 space-y-4"
+        >
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-2 rounded-full bg-purple-50">
-              <Sparkles className="w-4 h-4 text-purple-600" />
+            <div className="p-2 rounded-full bg-red-50">
+              <Shield className="w-4 h-4 text-red-600" />
             </div>
-            <h2 className="font-semibold text-sm">AI controls</h2>
+            <h2 className="font-semibold text-sm">Change Password</h2>
           </div>
           <p className="text-xs text-gray-500 mb-2">
-            Configure how the AI assists with your contracts.
+            Update your account password.
           </p>
+
+          {passwordMessage && (
+            <div
+              className={`text-xs px-3 py-2 rounded-lg ${
+                passwordMessage.includes("successfully")
+                  ? "bg-green-50 text-green-700"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {passwordMessage}
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-xs font-medium text-gray-700">
-              Default AI model
+              Current Password
             </label>
-            <select
+            <input
+              type="password"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={settings.aiModel}
-              onChange={(e) =>
-                setSettings((prev) =>
-                  prev ? { ...prev, aiModel: e.target.value } : prev
-                )
-              }
-            >
-              <option value="gpt-4.1-mini">gpt-4.1-mini (fast & efficient)</option>
-              <option value="gpt-4.1">gpt-4.1 (higher quality)</option>
-            </select>
-            <p className="text-[11px] text-gray-400">
-              You can change this anytime. Some models may use more credits.
-            </p>
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+            />
           </div>
 
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => setAutoAnalyze((v) => !v)}
-              className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border transition-colors ${
-                autoAnalyze ? "bg-blue-600 border-blue-600" : "bg-gray-200 border-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  autoAnalyze ? "translate-x-4" : "translate-x-0.5"
-                }`}
-              />
-            </button>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-gray-800">
-                Auto-analyze new contracts
-              </p>
-              <p className="text-[11px] text-gray-500">
-                When enabled, newly uploaded contracts will be sent to the AI
-                for analysis automatically. (UI only for now – hook to backend later.)
-              </p>
-            </div>
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700">
+              New Password
+            </label>
+            <input
+              type="password"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
           </div>
-        </div>
-      </div>
 
-      {/* Account & danger zone */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="p-2 rounded-full bg-red-50">
-            <Shield className="w-4 h-4 text-red-600" />
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-gray-700">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
           </div>
-          <h2 className="font-semibold text-sm">Account & security</h2>
-        </div>
-        <p className="text-xs text-gray-500">
-          Manage security-related actions for your account.
-        </p>
 
-        <div className="mt-2 flex flex-col gap-2 text-xs">
           <button
-            type="button"
-            className="inline-flex items-center self-start px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
+            type="submit"
+            disabled={changingPassword}
+            className="mt-2 inline-flex items-center px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 disabled:opacity-60"
           >
-            Change password (coming soon)
+            {changingPassword ? "Changing…" : "Change Password"}
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center self-start px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-          >
-            Deactivate account (coming soon)
-          </button>
-        </div>
-
-        <p className="text-[11px] text-gray-400 mt-2">
-          These options are placeholders for future account management features.
-        </p>
+        </form>
       </div>
     </div>
   );

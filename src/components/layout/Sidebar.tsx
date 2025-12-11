@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { LayoutDashboard, FileText, Settings, X } from "lucide-react";
 
 interface SidebarProps {
@@ -47,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, closeSidebar }) => {
         </div>
 
         {/* Links */}
-        <nav className="flex flex-col gap-2 p-4">
+        <nav className="flex flex-col gap-2 p-4 flex-1">
           {links.map((link) => (
             <NavLink
               key={link.path}
@@ -68,6 +68,26 @@ const Sidebar: React.FC<SidebarProps> = ({ open, closeSidebar }) => {
             </NavLink>
           ))}
         </nav>
+
+        {/* Footer with legal links */}
+        <div className="p-4 border-t">
+          <div className="flex flex-col gap-2 text-xs text-gray-500">
+            <Link
+              to="/terms"
+              onClick={closeSidebar}
+              className="hover:text-gray-900 transition"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              to="/privacy"
+              onClick={closeSidebar}
+              className="hover:text-gray-900 transition"
+            >
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
       </aside>
     </>
   );
